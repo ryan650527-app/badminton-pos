@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="羽翼">
+<meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='38' fill='%230f172a'/><text y='130' x='90' text-anchor='middle' font-size='100'>🏸</text></svg>">
+<title>羽翼進銷存</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f0f4f8;
+  --surface: #ffffff;
+  --surface2: #f8fafc;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text2: #475569;
+  --text3: #94a3b8;
+  --navy: #0f172a;
+  --blue: #1d4ed8;
+  --blue-light: #eff6ff;
+  --green: #059669;
+  --green-light: #ecfdf5;
+  --amber: #d97706;
+  --amber-light: #fffbeb;
+  --purple: #7c3aed;
+  --purple-light: #f5f3ff;
+  --red: #dc2626;
+  --red-light: #fef2f2;
+  --safe-top: env(safe-area-inset-top, 44px);
+  --safe-bottom: env(safe-area-inset-bottom, 20px);
+  --tab-h: 60px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--bg); font-family: 'Noto Sans TC', sans-serif; color: var(--text); overflow: hidden; }
+
+/* ── LAYOUT ── */
+#app { display: flex; flex-direction: column; height: 100%; }
+#header {
+  background: var(--navy);
+  padding: calc(var(--safe-top) + 10px) 18px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.header-title { color: #f8fafc; font-size: 18px; font-weight: 900; letter-spacing: 1px; }
+.header-sub { color: #64748b; font-size: 11px; margin-top: 1px; }
+.header-icon { font-size: 26px; }
+
+#content { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding-bottom: calc(var(--tab-h) + var(--safe-bottom) + 8px); }
+
+#tabbar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: calc(var(--tab-h) + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  z-index: 100;
+}
+.tab-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; border: none; background: transparent; cursor: pointer;
+  color: var(--text3); font-family: inherit; font-size: 10px; font-weight: 500;
+  padding-top: 6px; transition: color .15s;
+}
+.tab-btn .ti { font-size: 20px; }
+.tab-btn.active { color: var(--blue); }
+.tab-btn.active .ti { transform: scale(1.1); }
+
+/* ── SECTIONS ── */
+.section { padding: 16px; display: none; }
+.section.active { display: block; }
+
+/* ── STAT CARDS ── */
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.stat-card {
+  background: var(--surface); border-radius: 14px; padding: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.stat-icon { font-size: 20px; margin-bottom: 6px; }
+.stat-val { font-size: 17px; font-weight: 900; color: var(--text); }
+.stat-lbl { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+/* ── PANELS ── */
+.panel { background: var(--surface); border-radius: 14px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.panel-title { font-size: 13px; font-weight: 700; color: var(--text2); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+
+/* ── LIST ROWS ── */
+.list-row {
+  display: flex; align-items: center; padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.list-row:last-child { border-bottom: none; }
+.row-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; margin-right: 10px; }
+.row-main { flex: 1; min-width: 0; }
+.row-title { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.row-right { text-align: right; flex-shrink: 0; }
+.row-amt { font-size: 14px; font-weight: 900; }
+.row-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; display: inline-block; }
+
+/* ── FORMS ── */
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; display: block; }
+.form-input, .form-select {
+  width: 100%; padding: 11px 13px; border-radius: 10px;
+  border: 1.5px solid var(--border); background: var(--surface2);
+  font-family: inherit; font-size: 15px; color: var(--text);
+  -webkit-appearance: none; appearance: none; outline: none;
+  transition: border-color .15s;
+}
+.form-input:focus, .form-select:focus { border-color: var(--blue); background: #fff; }
+.form-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ── ITEM CARD ── */
+.item-card { background: var(--surface2); border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 1.5px solid var(--border); position: relative; }
+.item-card-row { display: flex; gap: 8px; margin-top: 8px; }
+.item-card-row .form-input { font-size: 14px; padding: 9px 10px; }
+.remove-btn { position: absolute; top: 10px; right: 10px; width: 24px; height: 24px; border-radius: 99px; background: var(--red-light); color: var(--red); border: none; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 900; }
+
+/* ── BUTTONS ── */
+.btn { display: block; width: 100%; padding: 14px; border-radius: 12px; border: none; font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer; text-align: center; transition: opacity .15s; }
+.btn:active { opacity: .8; }
+.btn-primary { background: var(--blue); color: #fff; }
+.btn-outline { background: transparent; color: var(--blue); border: 2px solid var(--blue); }
+.btn-sm { display: inline-flex; align-items: center; gap: 4px; padding: 7px 14px; border-radius: 9px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; font-family: inherit; }
+.btn-add { background: var(--blue-light); color: var(--blue); margin: 4px 0 14px; }
+
+/* ── TOTAL BAR ── */
+.total-bar { background: var(--navy); color: #fff; border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.total-bar-lbl { font-size: 13px; color: #94a3b8; }
+.total-bar-amt { font-size: 22px; font-weight: 900; }
+
+/* ── TABLE ── */
+.tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tbl th { padding: 7px 8px; text-align: left; color: var(--text3); font-size: 10px; font-weight: 700; text-transform: uppercase; border-bottom: 2px solid var(--border); }
+.tbl td { padding: 9px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl-amt { font-weight: 700; text-align: right; }
+
+/* ── BADGES ── */
+.badge-green { background: var(--green-light); color: var(--green); }
+.badge-blue { background: var(--blue-light); color: var(--blue); }
+.badge-amber { background: var(--amber-light); color: var(--amber); }
+.badge-purple { background: var(--purple-light); color: var(--purple); }
+.badge-red { background: var(--red-light); color: var(--red); }
+
+/* ── ALERT ── */
+.alert { border-radius: 10px; padding: 10px 13px; font-size: 12px; font-weight: 600; margin-bottom: 10px; }
+.alert-warn { background: var(--amber-light); color: var(--amber); }
+
+/* ── TOAST ── */
+#toast {
+  position: fixed; bottom: calc(var(--tab-h) + var(--safe-bottom) + 12px);
+  left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--navy); color: #fff;
+  padding: 11px 20px; border-radius: 99px;
+  font-size: 13px; font-weight: 700;
+  white-space: nowrap; z-index: 999;
+  opacity: 0; transition: all .25s;
+  pointer-events: none;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#toast.err { background: var(--red); }
+
+/* ── MODAL ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; display: none; align-items: flex-end; }
+.modal-overlay.open { display: flex; }
+.modal-sheet {
+  width: 100%; background: var(--surface); border-radius: 20px 20px 0 0;
+  padding: 20px 16px calc(var(--safe-bottom) + 20px);
+  max-height: 90vh; overflow-y: auto;
+}
+.modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 99px; margin: 0 auto 16px; }
+.modal-title { font-size: 18px; font-weight: 900; margin-bottom: 16px; }
+
+/* ── EMPTY ── */
+.empty-state { text-align: center; padding: 32px; color: var(--text3); }
+.empty-state .ei { font-size: 40px; margin-bottom: 8px; }
+
+/* ── SEARCH ── */
+.search-bar { position: relative; margin-bottom: 12px; }
+.search-bar input { padding-left: 36px; }
+.search-bar::before { content: '🔍'; position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 14px; pointer-events: none; }
+
+/* ── STOCK WARNING ── */
+.stock-low { color: var(--red); font-weight: 700; }
+.stock-ok { color: var(--green); }
+
+/* ── PAGE TITLE ── */
+.page-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.page-hd h2 { font-size: 20px; font-weight: 900; }
+
+/* ── SEGMENT ── */
+.segment { display: flex; background: var(--surface2); border-radius: 10px; padding: 3px; margin-bottom: 14px; border: 1px solid var(--border); }
+.seg-btn { flex: 1; padding: 8px; border: none; border-radius: 8px; background: transparent; font-family: inherit; font-size: 12px; font-weight: 700; color: var(--text3); cursor: pointer; transition: all .15s; }
+.seg-btn.active { background: var(--surface); color: var(--blue); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- HEADER -->
+  <div id="header">
+    <div>
+      <div class="header-title">🏸 羽翼進銷存</div>
+      <div class="header-sub" id="headerSub">今日摘要</div>
+    </div>
+    <div class="header-icon" id="headerAction"></div>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- 1. 儀表板 -->
+    <div class="section active" id="sec-dashboard">
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-val" id="st-sales">NT$0</div><div class="stat-lbl">銷售總額</div></div>
+        <div class="stat-card"><div class="stat-icon">🪢</div><div class="stat-val" id="st-string">NT$0</div><div class="stat-lbl">穿線收入</div></div>
+        <div class="stat-card"><div class="stat-icon">📈</div><div class="stat-val" id="st-rev">NT$0</div><div class="stat-lbl">總營收</div></div>
+        <div class="stat-card"><div class="stat-icon">🗄️</div><div class="stat-val" id="st-inv">NT$0</div><div class="stat-lbl">庫存估值</div></div>
+      </div>
+      <div class="panel" id="dash-lowstock"></div>
+      <div class="panel" id="dash-recent"></div>
+    </div>
+
+    <!-- 2. 銷售 -->
+    <div class="section" id="sec-sale">
+      <div class="page-hd"><h2>🛒 銷售開單</h2></div>
+      <div class="panel">
+        <div class="form-grid2">
+          <div class="form-group"><label class="form-label">客戶</label><input class="form-input" id="s-customer" placeholder="姓名 / 公司"></div>
+          <div class="form-group"><label class="form-label">日期</label><input class="form-input" id="s-date" type="date"></div>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:8px;">商品明細</div>
+        <div id="s-items"></div>
+        <button class="btn btn-add btn-sm" onclick="addSaleItem()">＋ 新增商品</button>
+        <div class="total-bar"><span class="total-bar-lbl">合計金額</span><span class="total-bar-amt" id="s-total">NT$0</span></div>
+        <div class="form-group"><label class="form-label">備註</label><input class="form-input" id="s-note" placeholder="選填"></div>
+        <button class="btn btn-primary" onclick="submitSale()">確認銷售</button>
+      </div>
+    </div>
+
+    <!-- 3. 進貨 -->
+    <div class="section" id="sec-purchase">
+      <div class="page-hd"><h2>📦 進貨入庫</h2></div>
+      <div class="panel">
+        <div class="form-grid2">
+          <div class="form-group"><label class="form-label">供應商</label><input class="form-input" id="p-supplier" placeholder="供應商名稱"></div>
+          <div class="form-group"><label class="form-label">日期</label><input class="form-input" id="p-date" type="date"></div>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:8px;">進貨明細</div>
+        <div id="p-items"></div>
+        <button class="btn btn-add btn-sm" onclick="addPurchaseItem()">＋ 新增商品</button>
+        <div class="total-bar"><span class="total-bar-lbl">合計金額</span><span class="total-bar-amt" id="p-total">NT$0</span></div>
+        <div class="form-group"><label class="form-label">備註</label><input class="form-input" id="p-note" placeholder="選填"></div>
+        <button class="btn btn-primary" onclick="submitPurchase()">確認進貨</button>
+      </div>
+    </div>
+
+    <!-- 4. 穿線 -->
+    <div class="section" id="sec-stringing">
+      <div class="page-hd"><h2>🏸 穿線服務</h2></div>
+      <div class="segment">
+        <button class="seg-btn active" id="seg-list" onclick="switchStrTab('list')">紀錄列表</button>
+        <button class="seg-btn" id="seg-new" onclick="switchStrTab('new')">新增穿線</button>
+      </div>
+      <div id="str-list-view"></div>
+      <div id="str-new-view" style="display:none">
+        <div class="panel">
+          <div class="form-grid2">
+            <div class="form-group"><label class="form-label">客戶姓名</label><input class="form-input" id="sv-customer" placeholder="姓名"></div>
+            <div class="form-group"><label class="form-label">日期</label><input class="form-input" id="sv-date" type="date"></div>
+          </div>
+          <div class="form-group"><label class="form-label">球拍型號</label><input class="form-input" id="sv-racket" placeholder="ex. Yonex Voltric 80"></div>
+          <div class="form-group"><label class="form-label">球線選擇</label>
+            <select class="form-select" id="sv-string" onchange="updateStringTotal()">
+              <option value="">-- 選擇球線 --</option>
+            </select>
+          </div>
+          <div class="form-grid2">
+            <div class="form-group"><label class="form-label">磅數設定</label><input class="form-input" id="sv-tension" placeholder="ex. 26/28 磅"></div>
+            <div class="form-group"><label class="form-label">穿線工資</label><input class="form-input" type="number" id="sv-labor" value="150" oninput="updateStringTotal()"></div>
+          </div>
+          <div class="total-bar">
+            <div><div class="total-bar-lbl">費用明細</div><div style="font-size:11px;color:#64748b;margin-top:2px;" id="sv-breakdown">球線 NT$0 ＋ 工資 NT$150</div></div>
+            <span class="total-bar-amt" id="sv-total">NT$150</span>
+          </div>
+          <button class="btn btn-primary" onclick="submitStringing()">建立穿線單</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. 庫存 -->
+    <div class="section" id="sec-inventory">
+      <div class="page-hd"><h2>🗄️ 庫存管理</h2><button class="btn-sm btn-primary" style="padding:9px 14px;border-radius:9px;" onclick="openAddModal()">＋ 新增</button></div>
+      <div class="search-bar"><input class="form-input" id="inv-search" placeholder="搜尋商品名稱 / SKU…" oninput="renderInventory()"></div>
+      <div class="segment">
+        <button class="seg-btn active" id="icat-all" onclick="setInvCat('全部')">全部</button>
+        <button class="seg-btn" id="icat-羽球" onclick="setInvCat('羽球')">羽球</button>
+        <button class="seg-btn" id="icat-球拍" onclick="setInvCat('球拍')">球拍</button>
+        <button class="seg-btn" id="icat-配件" onclick="setInvCat('配件')">配件</button>
+      </div>
+      <div id="inv-list"></div>
+    </div>
+
+    <!-- 6. 紀錄 -->
+    <div class="section" id="sec-ledger">
+      <div class="page-hd"><h2>📋 交易紀錄</h2></div>
+      <div class="segment">
+        <button class="seg-btn active" id="lcat-all" onclick="setLedgerCat('all')">全部</button>
+        <button class="seg-btn" id="lcat-sale" onclick="setLedgerCat('sale')">銷售</button>
+        <button class="seg-btn" id="lcat-purchase" onclick="setLedgerCat('purchase')">進貨</button>
+        <button class="seg-btn" id="lcat-stringing" onclick="setLedgerCat('stringing')">穿線</button>
+      </div>
+      <div id="ledger-list"></div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- TABBAR -->
+  <div id="tabbar">
+    <button class="tab-btn active" onclick="goto('dashboard')"><span class="ti">📊</span>總覽</button>
+    <button class="tab-btn" onclick="goto('sale')"><span class="ti">🛒</span>銷售</button>
+    <button class="tab-btn" onclick="goto('purchase')"><span class="ti">📦</span>進貨</button>
+    <button class="tab-btn" onclick="goto('stringing')"><span class="ti">🏸</span>穿線</button>
+    <button class="tab-btn" onclick="goto('inventory')"><span class="ti">🗄️</span>庫存</button>
+    <button class="tab-btn" onclick="goto('ledger')"><span class="ti">📋</span>紀錄</button>
+  </div>
+</div>
+
+<!-- ADD PRODUCT MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">新增商品</div>
+    <div class="form-grid2">
+      <div class="form-group"><label class="form-label">SKU</label><input class="form-input" id="m-sku"></div>
+      <div class="form-group"><label class="form-label">單位</label><input class="form-input" id="m-unit" value="筒"></div>
+    </div>
+    <div class="form-group"><label class="form-label">商品名稱</label><input class="form-input" id="m-name"></div>
+    <div class="form-group"><label class="form-label">類別</label>
+      <select class="form-select" id="m-cat"><option>羽球</option><option>球拍</option><option>配件</option></select>
+    </div>
+    <div class="form-grid2">
+      <div class="form-group"><label class="form-label">進價</label><input class="form-input" type="number" id="m-cost" value="0"></div>
+      <div class="form-group"><label class="form-label">售價</label><input class="form-input" type="number" id="m-price" value="0"></div>
+    </div>
+    <div class="form-group"><label class="form-label">初始庫存</label><input class="form-input" type="number" id="m-stock" value="0"></div>
+    <button class="btn btn-primary" onclick="saveNewProduct()" style="margin-bottom:8px;">確認新增</button>
+    <button class="btn btn-outline" onclick="closeModal()">取消</button>
+  </div>
+</div>
+
+<!-- EDIT PRODUCT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">編輯商品</div>
+    <input type="hidden" id="e-id">
+    <div class="form-group"><label class="form-label">商品名稱</label><input class="form-input" id="e-name"></div>
+    <div class="form-group"><label class="form-label">類別</label>
+      <select class="form-select" id="e-cat"><option>羽球</option><option>球拍</option><option>配件</option></select>
+    </div>
+    <div class="form-grid2">
+      <div class="form-group"><label class="form-label">進價</label><input class="form-input" type="number" id="e-cost"></div>
+      <div class="form-group"><label class="form-label">售價</label><input class="form-input" type="number" id="e-price"></div>
+    </div>
+    <div class="form-group"><label class="form-label">庫存數量</label><input class="form-input" type="number" id="e-stock"></div>
+    <button class="btn btn-primary" onclick="saveEditProduct()" style="margin-bottom:8px;">儲存</button>
+    <button class="btn btn-outline" onclick="closeEditModal()">取消</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────
+const STORE_KEY = 'badminton_pos_v2';
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || null; } catch { return null; }
+}
+function saveData() { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); }
+
+const DEFAULT_DB = {
+  products: [
+    { id:1, sku:"YY-AS50", name:"Yonex Aerosensa 50 羽球", category:"羽球", unit:"筒", cost:280, price:380, stock:40 },
+    { id:2, sku:"YY-AS30", name:"Yonex Aerosensa 30 羽球", category:"羽球", unit:"筒", cost:220, price:300, stock:55 },
+    { id:3, sku:"LI-A60",  name:"Li-Ning A60 羽球",        category:"羽球", unit:"筒", cost:180, price:250, stock:30 },
+    { id:4, sku:"YY-VT80", name:"Yonex Voltric 80 球拍",   category:"球拍", unit:"支", cost:2800, price:4200, stock:8 },
+    { id:5, sku:"YY-NF800",name:"Yonex Nanoflare 800 球拍",category:"球拍", unit:"支", cost:3200, price:4800, stock:5 },
+    { id:6, sku:"LI-N90",  name:"Li-Ning N90-IV 球拍",     category:"球拍", unit:"支", cost:2600, price:3800, stock:6 },
+    { id:7, sku:"YY-BG80", name:"Yonex BG80 球線",         category:"配件", unit:"條", cost:90,  price:150, stock:80 },
+    { id:8, sku:"YY-BG65Ti",name:"Yonex BG65Ti 球線",      category:"配件", unit:"條", cost:70,  price:120, stock:100 },
+    { id:9, sku:"LI-NS95", name:"Li-Ning No.1 球線",       category:"配件", unit:"條", cost:80,  price:130, stock:60 },
+    { id:10,sku:"GRIP-01", name:"Yonex AC102 握把布",      category:"配件", unit:"條", cost:30,  price:55,  stock:150 },
+  ],
+  transactions: [
+    { id:"TXN001", date:"2025-05-08", type:"sale",     customer:"陳先生", items:[{sku:"YY-AS50",name:"Yonex Aerosensa 50 羽球",qty:3,price:380}], total:1140, note:"" },
+    { id:"TXN002", date:"2025-05-09", type:"purchase", customer:"供應商A", items:[{sku:"YY-BG80",name:"Yonex BG80 球線",qty:20,price:90}], total:1800, note:"補貨" },
+  ],
+  stringing: [
+    { id:"SV001", date:"2025-05-10", customer:"王大明", racket:"Yonex Voltric 80", string:"YY-BG80", tension:"26/28 磅", laborFee:150, stringCost:150, total:300, status:"完成" },
+    { id:"SV002", date:"2025-05-12", customer:"李小華", racket:"Li-Ning N90",      string:"LI-NS95", tension:"24/26 磅", laborFee:150, stringCost:130, total:280, status:"完成" },
+  ]
+};
+
+let DB = loadData() || JSON.parse(JSON.stringify(DEFAULT_DB));
+
+// ── HELPERS ───────────────────────────────────────────────────
+const fmt = n => 'NT$' + Number(n).toLocaleString();
+const uid = () => Date.now().toString(36).toUpperCase();
+const today = () => new Date().toISOString().split('T')[0];
+
+function toast(msg, err = false) {
+  const el = document.getElementById('toast');
+  el.textContent = (err ? '✗ ' : '✓ ') + msg;
+  el.className = 'show' + (err ? ' err' : '');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = '', 2600);
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────
+let curPage = 'dashboard';
+function goto(page) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sec-' + page).classList.add('active');
+  document.querySelectorAll('.tab-btn')[['dashboard','sale','purchase','stringing','inventory','ledger'].indexOf(page)].classList.add('active');
+  document.getElementById('content').scrollTop = 0;
+  curPage = page;
+  const subs = {dashboard:'今日摘要', sale:'銷售開單', purchase:'進貨入庫', stringing:'穿線服務', inventory:'庫存管理', ledger:'交易紀錄'};
+  document.getElementById('headerSub').textContent = subs[page];
+  if (page === 'dashboard') renderDashboard();
+  if (page === 'sale') initSaleForm();
+  if (page === 'purchase') initPurchaseForm();
+  if (page === 'stringing') renderStringings();
+  if (page === 'inventory') renderInventory();
+  if (page === 'ledger') renderLedger();
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────
+function renderDashboard() {
+  const totalSales = DB.transactions.filter(t=>t.type==='sale').reduce((s,t)=>s+t.total,0);
+  const totalStr = DB.stringing.reduce((s,r)=>s+r.total,0);
+  const invVal = DB.products.reduce((s,p)=>s+p.cost*p.stock,0);
+  document.getElementById('st-sales').textContent = fmt(totalSales);
+  document.getElementById('st-string').textContent = fmt(totalStr);
+  document.getElementById('st-rev').textContent = fmt(totalSales + totalStr);
+  document.getElementById('st-inv').textContent = fmt(invVal);
+
+  // Low stock
+  const low = DB.products.filter(p=>p.stock<=10);
+  const ls = document.getElementById('dash-lowstock');
+  if (low.length === 0) {
+    ls.innerHTML = '<div class="panel-title">⚠️ 低庫存警示</div><div class="empty-state"><div class="ei">✅</div>庫存充足，無警示</div>';
+  } else {
+    ls.innerHTML = '<div class="panel-title">⚠️ 低庫存警示 <span class="row-badge badge-red">' + low.length + '</span></div>' +
+      low.map(p => `<div class="list-row">
+        <div class="row-icon" style="background:var(--amber-light)">${catIcon(p.category)}</div>
+        <div class="row-main"><div class="row-title">${p.name}</div><div class="row-sub">${p.sku}</div></div>
+        <div class="row-right"><div class="row-amt stock-low">${p.stock} ${p.unit}</div></div>
+      </div>`).join('');
+  }
+
+  // Recent
+  const recents = [...DB.transactions.map(t=>({...t,src:t.type==='sale'?'銷售':'進貨'})),
+    ...DB.stringing.map(r=>({id:r.id,date:r.date,src:'穿線',customer:r.customer,total:r.total}))
+  ].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
+  document.getElementById('dash-recent').innerHTML = '<div class="panel-title">🕐 最近交易</div>' +
+    (recents.length===0?'<div class="empty-state">尚無交易</div>':
+    recents.map(t=>`<div class="list-row">
+      <div class="row-icon" style="background:${t.src==='銷售'?'var(--green-light)':t.src==='進貨'?'var(--blue-light)':'var(--purple-light)'}">
+        ${t.src==='銷售'?'💰':t.src==='進貨'?'📦':'🪢'}
+      </div>
+      <div class="row-main"><div class="row-title">${t.customer}</div><div class="row-sub">${t.date} · ${t.src}</div></div>
+      <div class="row-right"><div class="row-amt">${fmt(t.total)}</div></div>
+    </div>`).join(''));
+}
+
+function catIcon(c) { return c==='球拍'?'🏸':c==='羽球'?'🪶':'⚙️'; }
+
+// ── SALE FORM ─────────────────────────────────────────────────
+let saleItems = [];
+function initSaleForm() {
+  document.getElementById('s-date').value = today();
+  document.getElementById('s-customer').value = '';
+  document.getElementById('s-note').value = '';
+  saleItems = [{ sku:'', qty:1, price:0, name:'' }];
+  renderSaleItems();
+}
+function renderSaleItems() {
+  document.getElementById('s-items').innerHTML = saleItems.map((it, i) => `
+    <div class="item-card">
+      <button class="remove-btn" onclick="removeSaleItem(${i})">✕</button>
+      <select class="form-select" onchange="onSaleSku(${i},this.value)">
+        <option value="">-- 選擇商品 --</option>
+        ${DB.products.map(p=>`<option value="${p.sku}" ${p.sku===it.sku?'selected':''}>${p.name}（庫存:${p.stock}${p.unit}）</option>`).join('')}
+      </select>
+      <div class="item-card-row">
+        <input class="form-input" style="width:80px" type="number" min="1" placeholder="數量" value="${it.qty}" oninput="onSaleQty(${i},this.value)">
+        <input class="form-input" style="flex:1" type="number" placeholder="單價" value="${it.price}" oninput="onSalePrice(${i},this.value)">
+        <div style="min-width:70px;text-align:right;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:flex-end">${fmt(it.qty*it.price)}</div>
+      </div>
+    </div>`).join('');
+  const tot = saleItems.reduce((s,i)=>s+i.qty*i.price,0);
+  document.getElementById('s-total').textContent = fmt(tot);
+}
+function addSaleItem() { saleItems.push({sku:'',qty:1,price:0,name:''}); renderSaleItems(); }
+function removeSaleItem(i) { saleItems.splice(i,1); if(!saleItems.length) saleItems.push({sku:'',qty:1,price:0,name:''}); renderSaleItems(); }
+function onSaleSku(i,v) { saleItems[i].sku=v; const p=DB.products.find(x=>x.sku===v); if(p){saleItems[i].price=p.price;saleItems[i].name=p.name;} renderSaleItems(); }
+function onSaleQty(i,v) { saleItems[i].qty=+v||1; renderSaleItems(); }
+function onSalePrice(i,v) { saleItems[i].price=+v||0; renderSaleItems(); }
+function submitSale() {
+  const cust = document.getElementById('s-customer').value.trim();
+  const date = document.getElementById('s-date').value;
+  const note = document.getElementById('s-note').value;
+  if (!cust) return toast('請填寫客戶名稱', true);
+  for (const it of saleItems) {
+    if (!it.sku) return toast('請選擇商品', true);
+    const p = DB.products.find(x=>x.sku===it.sku);
+    if (!p) return toast('商品不存在', true);
+    if (p.stock < it.qty) return toast(`${p.name} 庫存不足（剩 ${p.stock}）`, true);
+  }
+  saleItems.forEach(it => { const p=DB.products.find(x=>x.sku===it.sku); if(p) p.stock -= it.qty; });
+  const total = saleItems.reduce((s,i)=>s+i.qty*i.price,0);
+  DB.transactions.push({ id:'TXN'+uid(), date, type:'sale', customer:cust, items:saleItems.map(x=>({...x})), total, note });
+  saveData();
+  toast('銷售單已建立');
+  initSaleForm();
+}
+
+// ── PURCHASE FORM ──────────────────────────────────────────────
+let purchItems = [];
+function initPurchaseForm() {
+  document.getElementById('p-date').value = today();
+  document.getElementById('p-supplier').value = '';
+  document.getElementById('p-note').value = '';
+  purchItems = [{ sku:'', qty:1, price:0, name:'' }];
+  renderPurchItems();
+}
+function renderPurchItems() {
+  document.getElementById('p-items').innerHTML = purchItems.map((it, i) => `
+    <div class="item-card">
+      <button class="remove-btn" onclick="removePurchItem(${i})">✕</button>
+      <select class="form-select" onchange="onPurchSku(${i},this.value)">
+        <option value="">-- 選擇商品 --</option>
+        ${DB.products.map(p=>`<option value="${p.sku}" ${p.sku===it.sku?'selected':''}>${p.name}</option>`).join('')}
+      </select>
+      <div class="item-card-row">
+        <input class="form-input" style="width:80px" type="number" min="1" placeholder="數量" value="${it.qty}" oninput="onPurchQty(${i},this.value)">
+        <input class="form-input" style="flex:1" type="number" placeholder="進價" value="${it.price}" oninput="onPurchPrice(${i},this.value)">
+        <div style="min-width:70px;text-align:right;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:flex-end">${fmt(it.qty*it.price)}</div>
+      </div>
+    </div>`).join('');
+  const tot = purchItems.reduce((s,i)=>s+i.qty*i.price,0);
+  document.getElementById('p-total').textContent = fmt(tot);
+}
+function addPurchaseItem() { purchItems.push({sku:'',qty:1,price:0,name:''}); renderPurchItems(); }
+function removePurchItem(i) { purchItems.splice(i,1); if(!purchItems.length) purchItems.push({sku:'',qty:1,price:0,name:''}); renderPurchItems(); }
+function onPurchSku(i,v) { purchItems[i].sku=v; const p=DB.products.find(x=>x.sku===v); if(p){purchItems[i].price=p.cost;purchItems[i].name=p.name;} renderPurchItems(); }
+function onPurchQty(i,v) { purchItems[i].qty=+v||1; renderPurchItems(); }
+function onPurchPrice(i,v) { purchItems[i].price=+v||0; renderPurchItems(); }
+function submitPurchase() {
+  const sup = document.getElementById('p-supplier').value.trim();
+  const date = document.getElementById('p-date').value;
+  const note = document.getElementById('p-note').value;
+  if (!sup) return toast('請填寫供應商名稱', true);
+  for (const it of purchItems) { if (!it.sku) return toast('請選擇商品', true); }
+  purchItems.forEach(it => { const p=DB.products.find(x=>x.sku===it.sku); if(p) p.stock += it.qty; });
+  const total = purchItems.reduce((s,i)=>s+i.qty*i.price,0);
+  DB.transactions.push({ id:'TXN'+uid(), date, type:'purchase', customer:sup, items:purchItems.map(x=>({...x})), total, note });
+  saveData();
+  toast('進貨單已建立');
+  initPurchaseForm();
+}
+
+// ── STRINGING ─────────────────────────────────────────────────
+function switchStrTab(tab) {
+  document.getElementById('seg-list').classList.toggle('active', tab==='list');
+  document.getElementById('seg-new').classList.toggle('active', tab==='new');
+  document.getElementById('str-list-view').style.display = tab==='list'?'':'none';
+  document.getElementById('str-new-view').style.display = tab==='new'?'':'none';
+  if (tab==='new') initStringForm();
+}
+function renderStringings() {
+  switchStrTab('list');
+  const el = document.getElementById('str-list-view');
+  if (!DB.stringing.length) { el.innerHTML='<div class="empty-state"><div class="ei">🪢</div>尚無穿線紀錄</div>'; return; }
+  el.innerHTML = [...DB.stringing].reverse().map(r => `
+    <div class="panel" style="margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:12px;font-weight:700;color:var(--text3)">${r.id}</span>
+        <span class="row-badge ${r.status==='完成'?'badge-green':'badge-amber'}">${r.status}</span>
+      </div>
+      <div style="font-size:15px;font-weight:900;margin-bottom:4px;">${r.customer}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:2px;">🎾 ${r.racket}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:2px;">🪢 ${r.string} · ${r.tension}</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">📅 ${r.date}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:18px;font-weight:900;">${fmt(r.total)}</span>
+        ${r.status!=='完成'?`<button class="btn-sm" style="background:var(--green-light);color:var(--green);" onclick="completeStr('${r.id}')">✓ 標記完成</button>`:''}
+      </div>
+    </div>`).join('');
+}
+function completeStr(id) {
+  const r = DB.stringing.find(x=>x.id===id);
+  if (r) { r.status='完成'; saveData(); renderStringings(); toast('已標記完成'); }
+}
+function initStringForm() {
+  document.getElementById('sv-date').value = today();
+  document.getElementById('sv-customer').value = '';
+  document.getElementById('sv-racket').value = '';
+  document.getElementById('sv-tension').value = '';
+  document.getElementById('sv-labor').value = '150';
+  const sel = document.getElementById('sv-string');
+  sel.innerHTML = '<option value="">-- 選擇球線 --</option>' +
+    DB.products.filter(p=>p.category==='配件'&&p.name.includes('球線')).map(p=>
+      `<option value="${p.sku}">${p.name}（庫存:${p.stock}）— ${fmt(p.price)}</option>`
+    ).join('');
+  updateStringTotal();
+}
+function updateStringTotal() {
+  const sku = document.getElementById('sv-string').value;
+  const p = DB.products.find(x=>x.sku===sku);
+  const sc = p ? p.price : 0;
+  const lab = +document.getElementById('sv-labor').value || 0;
+  document.getElementById('sv-breakdown').textContent = `球線 ${fmt(sc)} ＋ 工資 ${fmt(lab)}`;
+  document.getElementById('sv-total').textContent = fmt(sc + lab);
+}
+function submitStringing() {
+  const customer = document.getElementById('sv-customer').value.trim();
+  const date = document.getElementById('sv-date').value;
+  const racket = document.getElementById('sv-racket').value.trim();
+  const stringSku = document.getElementById('sv-string').value;
+  const tension = document.getElementById('sv-tension').value.trim();
+  const laborFee = +document.getElementById('sv-labor').value || 0;
+  if (!customer || !racket || !stringSku) return toast('請填寫完整資料', true);
+  const sp = DB.products.find(p=>p.sku===stringSku);
+  if (!sp || sp.stock < 1) return toast('球線庫存不足', true);
+  sp.stock--;
+  const stringCost = sp.price;
+  DB.stringing.push({ id:'SV'+uid(), date, customer, racket, string:stringSku, tension, laborFee, stringCost, total:laborFee+stringCost, status:'處理中' });
+  saveData();
+  toast('穿線單已建立');
+  switchStrTab('list');
+}
+
+// ── INVENTORY ─────────────────────────────────────────────────
+let invCat = '全部';
+function setInvCat(cat) {
+  invCat = cat;
+  document.querySelectorAll('[id^="icat-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('icat-' + (cat==='全部'?'all':cat)).classList.add('active');
+  renderInventory();
+}
+function renderInventory() {
+  const q = document.getElementById('inv-search').value.toLowerCase();
+  const list = DB.products.filter(p =>
+    (invCat==='全部' || p.category===invCat) &&
+    (p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q))
+  );
+  document.getElementById('inv-list').innerHTML = list.length === 0 ?
+    '<div class="empty-state"><div class="ei">🔍</div>找不到商品</div>' :
+    list.map(p => `
+      <div class="panel" style="margin-bottom:8px;padding:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="background:var(--blue-light);width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">${catIcon(p.category)}</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;">${p.name}</div>
+              <div style="font-size:11px;color:var(--text3);">${p.sku}</div>
+            </div>
+          </div>
+          <button class="btn-sm" style="background:var(--blue-light);color:var(--blue);" onclick="openEditModal(${p.id})">編輯</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;text-align:center;background:var(--surface2);border-radius:8px;padding:8px;">
+          <div><div style="font-size:10px;color:var(--text3)">庫存</div><div style="font-size:14px;font-weight:900;color:${p.stock<=10?'var(--red)':'var(--text)'}">${p.stock}</div></div>
+          <div><div style="font-size:10px;color:var(--text3)">進價</div><div style="font-size:12px;font-weight:700;">${fmt(p.cost)}</div></div>
+          <div><div style="font-size:10px;color:var(--text3)">售價</div><div style="font-size:12px;font-weight:700;">${fmt(p.price)}</div></div>
+          <div><div style="font-size:10px;color:var(--text3)">毛利</div><div style="font-size:12px;font-weight:700;color:var(--green)">${p.price>0?((p.price-p.cost)/p.price*100).toFixed(0)+'%':'—'}</div></div>
+        </div>
+      </div>`).join('');
+}
+function openAddModal() { document.getElementById('addModal').classList.add('open'); }
+function closeModal() { document.getElementById('addModal').classList.remove('open'); }
+function saveNewProduct() {
+  const sku = document.getElementById('m-sku').value.trim();
+  const name = document.getElementById('m-name').value.trim();
+  if (!sku || !name) return toast('SKU 與名稱為必填', true);
+  if (DB.products.find(p=>p.sku===sku)) return toast('SKU 已存在', true);
+  DB.products.push({ id:Date.now(), sku, name, category:document.getElementById('m-cat').value, unit:document.getElementById('m-unit').value, cost:+document.getElementById('m-cost').value, price:+document.getElementById('m-price').value, stock:+document.getElementById('m-stock').value });
+  saveData(); closeModal(); renderInventory(); toast('商品已新增');
+}
+function openEditModal(id) {
+  const p = DB.products.find(x=>x.id===id);
+  if (!p) return;
+  document.getElementById('e-id').value = id;
+  document.getElementById('e-name').value = p.name;
+  document.getElementById('e-cat').value = p.category;
+  document.getElementById('e-cost').value = p.cost;
+  document.getElementById('e-price').value = p.price;
+  document.getElementById('e-stock').value = p.stock;
+  document.getElementById('editModal').classList.add('open');
+}
+function closeEditModal() { document.getElementById('editModal').classList.remove('open'); }
+function saveEditProduct() {
+  const id = +document.getElementById('e-id').value;
+  const p = DB.products.find(x=>x.id===id);
+  if (!p) return;
+  p.name = document.getElementById('e-name').value;
+  p.category = document.getElementById('e-cat').value;
+  p.cost = +document.getElementById('e-cost').value;
+  p.price = +document.getElementById('e-price').value;
+  p.stock = +document.getElementById('e-stock').value;
+  saveData(); closeEditModal(); renderInventory(); toast('已更新');
+}
+
+// ── LEDGER ────────────────────────────────────────────────────
+let ledgerCat = 'all';
+function setLedgerCat(cat) {
+  ledgerCat = cat;
+  document.querySelectorAll('[id^="lcat-"]').forEach(b=>b.classList.remove('active'));
+  document.getElementById('lcat-'+cat).classList.add('active');
+  renderLedger();
+}
+function renderLedger() {
+  const all = [
+    ...DB.transactions.map(t=>({...t, src:t.type==='sale'?'銷售':'進貨'})),
+    ...DB.stringing.map(r=>({id:r.id, date:r.date, type:'stringing', src:'穿線', customer:r.customer, total:r.total, items:[{name:`${r.racket} | ${r.string}`,qty:1,price:r.total}]}))
+  ].sort((a,b)=>b.date.localeCompare(a.date));
+  const filtered = ledgerCat==='all' ? all : all.filter(t=>t.type===ledgerCat);
+  const el = document.getElementById('ledger-list');
+  if (!filtered.length) { el.innerHTML='<div class="empty-state"><div class="ei">📋</div>尚無紀錄</div>'; return; }
+  el.innerHTML = filtered.map(t => {
+    const color = t.src==='銷售'?'badge-green':t.src==='進貨'?'badge-blue':'badge-purple';
+    return `<div class="panel" style="margin-bottom:8px;padding:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <span class="row-badge ${color}" style="margin-bottom:4px;display:inline-block;">${t.src}</span>
+          <div style="font-size:15px;font-weight:900;">${t.customer}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">${t.date} · ${t.id}</div>
+        </div>
+        <div style="font-size:17px;font-weight:900;">${fmt(t.total)}</div>
+      </div>
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:12px;color:var(--text2);">
+        ${t.items.map(i=>`${i.name} × ${i.qty}`).join('、')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── MODAL CLOSE ON BACKDROP ───────────────────────────────────
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if(e.target===el) el.classList.remove('open'); });
+});
+
+// ── INIT ──────────────────────────────────────────────────────
+document.getElementById('s-date').value = today();
+document.getElementById('p-date').value = today();
+renderDashboard();
+initSaleForm();
+initPurchaseForm();
+
+// ── SERVICE WORKER ────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
